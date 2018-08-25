@@ -15,7 +15,7 @@ describe('test a Graph in one DataBase', function(){
 		try{
 			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
 			let gdb = new MG.Graph(client,{print_out:true});
-			let startTime = gdb.begin_profiling("Main"); 
+			gdb.begin_profiling("Main"); 
 			    await gdb.clearDB(dbname); // clear all test DB 
 				let results = await gdb.insert(dbname, "entities", [{id:1}, {id:2}, {id:3}])  
 				let things = await gdb.get(dbname, "entities", {});   
@@ -35,7 +35,7 @@ describe('test a Graph in one DataBase', function(){
 				let lastOne = await gdb.getLastOne(dbname, "entities", {});   
 				assert(lastOne.id == 3)  
 		    	await client.close();  
-			gdb.end_profiling(startTime); 
+			gdb.end_profiling('Done'); 
 		}
 		catch(err){
 			console.log(err);
@@ -46,7 +46,7 @@ describe('test a Graph in one DataBase', function(){
 		try{
 			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
 			let gdb = new MG.Graph(client,{print_out:true});
-			let startTime = gdb.begin_profiling("Main");  
+			gdb.begin_profiling("Main");  
 				let edge12={_src:{table:"entities", _id:_v1._id}, _dst:{table:"entities", _id:_v2._id}};
 				results = await gdb.insertEdge(dbname, "edges", edge12); 
 				assert(results.ops.length==1);
@@ -57,18 +57,43 @@ describe('test a Graph in one DataBase', function(){
 				results = await gdb.getOutEV(dbname, "entities", {_id: _v1._id}, "edges", {});
 				assert(results.length==5); // itself, two edges, two out vtxs
 		    	await client.close();
-			gdb.end_profiling(startTime); 
+			gdb.end_profiling('Done'); 
 		}
 		catch(err){
 			console.log(err);
 			assert(0);
 		}  
 	});
-	 it('Test edges ', async() => { 
+	it('Test edges retrival', async() => { 
 		try{
 			 let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
 			let gdb = new MG.Graph(client,{print_out:true});
-			let startTime = gdb.begin_profiling("Main"); 
+			gdb.begin_profiling("Main"); 
+				let results = await gdb.getOutEV(dbname, "entities", {_id: _v1._id}, "edges", {});
+				assert(results.length==5); // itself, two edges, two out vtxs
+		    	 
+		    	results = await gdb.getInEV(dbname, "entities", {_id: _v1._id}, "edges", {});
+				assert(results.length==1); // only itself
+
+				results = await gdb.getInEV(dbname, "entities", {_id: _v2._id}, "edges", {});
+				assert(results.length==3); // itself, one edge, one vtx
+
+				results = await gdb.getInEV(dbname, "entities", {_id: _v3._id}, "edges", {});
+				assert(results.length==3); // itself, one edge, one vtx
+
+		    	await client.close('Done');
+			gdb.end_profiling(); 
+		}
+		catch(err){
+			console.log(err);
+			assert(0);
+		}  
+	});
+    it('Test remove function', async() => { 
+		try{
+			 let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
+			let gdb = new MG.Graph(client,{print_out:true});
+			gdb.begin_profiling("Main"); 
 				let results = await gdb.getOutEV(dbname, "entities", {_id: _v1._id}, "edges", {});
 				assert(results.length==5); // itself, two edges, two out vtxs
 		    	 
@@ -82,29 +107,12 @@ describe('test a Graph in one DataBase', function(){
 				assert(results.length==3); // itself, one edge, one vtx
 
 		    	await client.close();
-			gdb.end_profiling(startTime); 
+			gdb.end_profiling('Done'); 
 		}
 		catch(err){
 			console.log(err);
 			assert(0);
 		}  
-	});
-
-/*	it('check after first internal transition', function() {
-		engine.make_run(true); // true is synchronous.
-		let q = m.q_state_JSON();
-		console.log("q1="+JSON.stringify(q));
-		assert(q.tL==100);
-		assert(q.tN==150);
-		assert(q.state.phase==1);
-	}) 
-	it('check after 2nd internal transition', function() {
-		engine.make_run(true); // true is synchronous.
-		let q = m.q_state_JSON();
-		console.log("q2="+JSON.stringify(q));
-		assert(q.tL==150);
-		assert(q.tN==250);
-		assert(q.state.phase==0);
-	}) */
+	}); 
 	
 });

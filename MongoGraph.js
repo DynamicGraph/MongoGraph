@@ -21,22 +21,22 @@ MG.Graph = function(client, options){
 	this.fname_stack=[],
 	this.begin_profiling = function(fname) {
 		let startTime = new Date(); 
-		this.fname_stack.push(fname); 
+		this.fname_stack.push({fileName:fname, startTime:startTime}); 
 		
 		if(this.print_out) {
 			let tabstr = "";
 			for(let ii=0; ii<this.fname_stack.length-1; ii++)
 				tabstr +="\t";
 			console.log(tabstr+"-> "+fname);
-		}
-		return startTime;
+		} 
 	}
-	this.end_profiling = function(startTime, results) { 
+	this.end_profiling = function(results) { 
+		let startTime = this.fname_stack[this.fname_stack.length-1].startTime; 
 		let elapsedt = (new Date() - startTime)/1000;
 		if(this.print_out) {
-			let fname = this.fname_stack[this.fname_stack.length-1]; 
+			let fname = this.fname_stack[this.fname_stack.length-1].fileName; 
 			let tabstr = "";
-		    for(let ii=0; ii<this.fname_stack.length-1; ii++)
+		    for(let ii=0; ii<this.fname_stack.length; ii++)
 			    tabstr +="\t";
 			console.log(tabstr+JSON.stringify(results));
 			console.log(tabstr+"<- " + fname+ ": " + elapsedt+ " secs"); 
@@ -50,10 +50,10 @@ MG.Graph = function(client, options){
      * Connect and close DB perform before and after this function.
     */
     this.clearDB = async function(dbName) { 
-    	let startTime = this.begin_profiling("clearDB");
+    	this.begin_profiling("clearDB");
         let db = await this.client.db(dbName); 
     	let results = await db.dropDatabase();
-    	this.end_profiling( startTime, results); 
+    	this.end_profiling(results); 
     } 
     /**
      * Insert a set of documents at a given collection.  
@@ -63,8 +63,7 @@ MG.Graph = function(client, options){
      * @return {} results. 
     */
 	this.insert = async function(dbName, collection_name, Docs) {
-		let startTime = this.begin_profiling("insert");
-		
+		this.begin_profiling("insert"); 
 		const db = this.client.db(dbName);
 		let collection = await db.collection(collection_name); // this.check_getCollection(db, collection_name, Docs); 
 		let results=null;
@@ -73,7 +72,7 @@ MG.Graph = function(client, options){
 		else if (Docs instanceof Object)
 			results= await collection.insertOne(Docs); 
 		 
-		this.end_profiling(startTime, results); 
+		this.end_profiling(results); 
 		return results;
 	}
 	
@@ -86,7 +85,7 @@ MG.Graph = function(client, options){
      * @return {} results. 
     */
 	this.insertEdge = async function(dbName, collection_name, arrayEdgeDocs) { 
-		let startTime = this.begin_profiling("insertEdge");
+		this.begin_profiling("insertEdge");
 		assert(arrayEdgeDocs); 	
 		if(Array.isArray(arrayEdgeDocs) == false)
 			arrayEdgeDocs = [arrayEdgeDocs];
@@ -104,7 +103,7 @@ MG.Graph = function(client, options){
 		let results = null;
 		if(validEdges.length>0)
 			results = await this.insert(dbName, collection_name, validEdges); 
-		this.end_profiling(startTime,results);
+		this.end_profiling(results);
 		return results; 
 	} 
 	
@@ -116,10 +115,10 @@ MG.Graph = function(client, options){
      * @return {Array} results. 
     */
 	this.get = async function(dbName, collection_name, condition) {  
-		let startTime = this.begin_profiling("get");
+		this.begin_profiling("get");
 		let db = this.client.db(dbName);
 		let results = await db.collection(collection_name).find(condition).toArray();
-		this.end_profiling(startTime,results);
+		this.end_profiling(results);
 	 	return results;
 	}  
     
@@ -131,7 +130,7 @@ MG.Graph = function(client, options){
      * @return {Array} results. 
     */
 	this.getLastOne = async function(dbName, collection_name, condition) {  
-		let startTime = this.begin_profiling("getLastOne");
+		this.begin_profiling("getLastOne");
 		let db = await this.client.db(dbName);
 		let collection = await db.collection(collection_name);  
 		let cursor = await collection.find(condition).sort({_id:-1}).limit(1); 
@@ -142,7 +141,7 @@ MG.Graph = function(client, options){
             if(items && items.length>0)  
             	results=items[0];
         }
-        this.end_profiling(startTime,results);
+        this.end_profiling(results);
         return results;
 	}
 	 
@@ -156,7 +155,7 @@ MG.Graph = function(client, options){
      * @return {Array} contating all destiations, incoming edges, and incoming sources. 
     */
 	this.getInEV = async function(dbName, dst_collection_name, dst_condition, edge_col_name, edge_condition) { 
-		let startTime = this.begin_profiling("getInEV"); 
+		this.begin_profiling("getInEV"); 
 		let db = await this.client.db(dbName);
 		let dst_collection = await db.collection(dst_collection_name); // this.check_getCollection(db, dst_collection_name, dst_condition);  
 		let edge_col = await db.collection(edge_col_name); //this.check_getCollection(db, edge_col_name, edge_condition);   
@@ -193,7 +192,7 @@ MG.Graph = function(client, options){
 				}  // for source 
 			} // for each incoming edge 
 		}// for each destination  
-		this.end_profiling(startTime,resultArray);
+		this.end_profiling(resultArray);
 		return resultArray;
 	} 
     
@@ -207,7 +206,7 @@ MG.Graph = function(client, options){
      * @return {Array} contating all destiations, incoming edges, and incoming sources.
     */
 	this.getOutEV = async function(dbName, src_collection_name, src_condition, edge_col_name, edge_condition) {  
-		let startTime = this.begin_profiling("getOutEV"); 
+		this.begin_profiling("getOutEV"); 
 		let db = await this.client.db(dbName);
 		let src_collection = await db.collection(src_collection_name); //this.check_getCollection(db, src_collection_name, src_condition);  
 		let edge_col = await db.collection(edge_col_name); //this.check_getCollection(db, edge_col_name, edge_condition);   
@@ -242,7 +241,7 @@ MG.Graph = function(client, options){
 				} // for each destination of an edge 
 			}// for each edge 
 		} // for each source 
-		this.end_profiling(startTime,resultArray);
+		this.end_profiling(resultArray);
 		return resultArray;
 	}  
 	
@@ -254,7 +253,7 @@ MG.Graph = function(client, options){
      * @param {string[]} edge_collection_names - an array of names of edge collections.
     */
 	this.remove = async function(dbName, collection_name, condition, edge_collection_names) {   
-		let startTime = this.begin_profiling("remove"); 
+		this.begin_profiling("remove"); 
         let deleteResults=[]; // array of deleting items 
       	let arrayRemoveTargets = await this.get(dbName, collection_name, condition);
       	let db = await this.client.db(dbName); 
@@ -273,7 +272,7 @@ MG.Graph = function(client, options){
             let results = await vtx_col.deleteOne(doc); 
        		deleteResults.push(results); // results.ops); 
         } // for each target
-        this.end_profiling(startTime,deleteResults);
+        this.end_profiling(deleteResults);
         return deleteResults;
 	} 
     
@@ -286,11 +285,11 @@ MG.Graph = function(client, options){
      * @param {function} callback - a callback function to handle an array of documentes updated and db.   
     */
 	this.update = async function(dbName, collection_name, condition, newdoc, callback) {  
-		let startTime = this.begin_profiling("update"); 
+		this.begin_profiling("update"); 
 		let db = await this.client.db(dbName);
 		let collection = await db.collection(collection_name); //this.check_getCollection(db, collection_name, condition); 
 		let results = await collection.update(condition, newdoc).toArray();
-		this.end_profiling(startTime,results);
+		this.end_profiling(results);
 		return results;
 	} 
 }    
@@ -303,14 +302,14 @@ if (typeof window === 'undefined') {  // node
 	 	(async() => {
 			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
 			let gdb = new MG.Graph(client,{print_out:true});
-			let startTime = gdb.begin_profiling("Main"); 
+			gdb.begin_profiling("Main"); 
 				let results = await gdb.insert("MoonHo", "test", [{nick_name:"오히려전법", id:1}, {name:"Su K Cho", id:2}])  
 				let things = await gdb.get('MoonHo', "test", {});   
 				let thing = await gdb.getLastOne('MoonHo', "test", {});   
 				//await gdb.clearDB("Member");
 		    	await gdb.clearDB("MoonHo"); // clear all test DB
 		    	await client.close(); 
-		    gdb.end_profiling(startTime);
+		    gdb.end_profiling(" Done ");
 		})().catch(err => console.error(err));
 	 }
 } 
