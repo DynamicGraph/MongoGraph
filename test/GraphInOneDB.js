@@ -2,7 +2,7 @@
 const MG = require("../MongoGraph.js") 
 const assert = require('chai').assert;
 //const AG = require('../AGraph');
-const MongoClient = require('mongodb').MongoClient
+const MongoClient = require('mongodb').MongoClient ;
 
 describe('test a Graph in one DataBase', function(){ 
 	console.log("Tables:'entities','edges'");
@@ -35,11 +35,12 @@ describe('test a Graph in one DataBase', function(){
 				let lastOne = await gdb.getLastOne(dbname, "entities", {});   
 				assert(lastOne.id == 3)  
 		    	await client.close();  
-			gdb.end_profiling('Done'); 
+		    	//assert(0);
+			gdb.end_profiling();   
 		}
 		catch(err){
 			console.log(err);
-			assert(0);
+			assert(0); 
 		} 
 	});
 	it('Test create two edges: "1->2", "1->3" ', async() => { 
@@ -48,16 +49,13 @@ describe('test a Graph in one DataBase', function(){
 			let gdb = new MG.Graph(client,{print_out:true});
 			gdb.begin_profiling("Main");  
 				let edge12={_src:{table:"entities", _id:_v1._id}, _dst:{table:"entities", _id:_v2._id}};
-				results = await gdb.insertEdge(dbname, "edges", edge12); 
+				results = await gdb.insert(dbname, "edges", edge12); 
 				assert(results.ops.length==1);
 				let edge13={_src:{table:"entities", _id:_v1._id}, _dst:{table:"entities", _id:_v3._id}};
-				results = await gdb.insertEdge(dbname, "edges", edge13); 
+				results = await gdb.insert(dbname, "edges", edge13); 
 				assert(results.ops.length==1); 
-				//debugger;
-				results = await gdb.getOutEV(dbname, "entities", {_id: _v1._id}, "edges", {});
-				assert(results.length==5); // itself, two edges, two out vtxs
 		    	await client.close();
-			gdb.end_profiling('Done'); 
+			gdb.end_profiling(); 
 		}
 		catch(err){
 			console.log(err);
@@ -81,7 +79,7 @@ describe('test a Graph in one DataBase', function(){
 				results = await gdb.getInEV(dbname, "entities", {_id: _v3._id}, "edges", {});
 				assert(results.length==3); // itself, one edge, one vtx
 
-		    	await client.close('Done');
+		    	await client.close();
 			gdb.end_profiling(); 
 		}
 		catch(err){
@@ -94,25 +92,42 @@ describe('test a Graph in one DataBase', function(){
 			 let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
 			let gdb = new MG.Graph(client,{print_out:true});
 			gdb.begin_profiling("Main"); 
-				let results = await gdb.getOutEV(dbname, "entities", {_id: _v1._id}, "edges", {});
-				assert(results.length==5); // itself, two edges, two out vtxs
+				let results = await gdb.remove(dbname, "entities", {_id: _v1._id}, ["edges"]); 
 		    	 
-		    	results = await gdb.getInEV(dbname, "entities", {_id: _v1._id}, "edges", {});
-				assert(results.length==1); // only itself
+		    	results = await gdb.get(dbname, "entities", {});
+				assert(results.length==2); // v2 and v3 remains. 
+
+				results = await gdb.get(dbname, "edges",  {});
+				assert(results.length==0); // all edges are deleted 
 
 				results = await gdb.getInEV(dbname, "entities", {_id: _v2._id}, "edges", {});
-				assert(results.length==3); // itself, one edge, one vtx
-
-				results = await gdb.getInEV(dbname, "entities", {_id: _v3._id}, "edges", {});
-				assert(results.length==3); // itself, one edge, one vtx
+				assert(results.length==1); // only itself
 
 		    	await client.close();
-			gdb.end_profiling('Done'); 
+			gdb.end_profiling(); 
+			//assert(0); // intentional fail for checking hanging. 
 		}
 		catch(err){
 			console.log(err);
 			assert(0);
 		}  
 	}); 
-	
+	it('Test update function', async() => { 
+		try{
+			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
+			let gdb = new MG.Graph(client,{print_out:true});
+			gdb.begin_profiling("Main"); 
+				let result = await gdb.update(dbname, "entities", {_id: _v2._id}, {id:22} ); 
+				assert(result.modifiedCount==1); //   
+				let results = await gdb.get(dbname, "entities", {_id: _v2._id}); 
+				assert(results[0].id == 22);
+		    	await client.close();
+			gdb.end_profiling(); 
+			//assert(0); // intentional fail for checking hanging. 
+		}
+		catch(err){
+			console.log(err);
+			assert(0);
+		}  
+	}); 
 });
