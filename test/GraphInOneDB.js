@@ -9,7 +9,7 @@ describe('test a Graph in one DataBase', function(){
 	console.log(" 1--->2");
     console.log(" |     ");
     console.log(" +--->3");
-	let dbname = "MoonHo"
+	let dbname = "MoonHo";
 	var _v1=null, _v2=null, _v3=null
 	it('Test create three vertices: "1", "2", "3" ', async() => { 
 		try{
@@ -48,11 +48,11 @@ describe('test a Graph in one DataBase', function(){
 			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
 			let gdb = new MG.Graph(client,{print_out:true});
 			gdb.begin_profiling("Main");  
-				let edge12={_src:{table:"entities", _id:_v1._id}, _dst:{table:"entities", _id:_v2._id}};
-				results = await gdb.insert(dbname, "edges", edge12); 
+				let edge12={_src:{db:dbname, table:"entities", _id:_v1._id}, _dst:{db:dbname, table:"entities", _id:_v2._id}};
+				results = await gdb.insertEdge(dbname, "edges", edge12); 
 				assert(results.ops.length==1);
-				let edge13={_src:{table:"entities", _id:_v1._id}, _dst:{table:"entities", _id:_v3._id}};
-				results = await gdb.insert(dbname, "edges", edge13); 
+				let edge13={_src:{db:dbname, table:"entities", _id:_v1._id}, _dst:{db:dbname, table:"entities", _id:_v3._id}};
+				results = await gdb.insertEdge(dbname, "edges", edge13); 
 				assert(results.ops.length==1); 
 		    	await client.close();
 			gdb.end_profiling(); 
@@ -64,19 +64,19 @@ describe('test a Graph in one DataBase', function(){
 	});
 	it('Test edges retrival', async() => { 
 		try{
-			 let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
+			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
 			let gdb = new MG.Graph(client,{print_out:true});
 			gdb.begin_profiling("Main"); 
-				let results = await gdb.getOutEV(dbname, "entities", {_id: _v1._id}, "edges", {});
+				let results = await gdb.getOutEV(dbname, "entities", {_id: _v1._id}, dbname, "edges", {});
 				assert(results.length==5); // itself, two edges, two out vtxs
 		    	 
-		    	results = await gdb.getInEV(dbname, "entities", {_id: _v1._id}, "edges", {});
+		    	results = await gdb.getInEV(dbname, "entities", {_id: _v1._id}, dbname, "edges", {});
 				assert(results.length==1); // only itself
 
-				results = await gdb.getInEV(dbname, "entities", {_id: _v2._id}, "edges", {});
+				results = await gdb.getInEV(dbname, "entities", {_id: _v2._id}, dbname, "edges", {});
 				assert(results.length==3); // itself, one edge, one vtx
 
-				results = await gdb.getInEV(dbname, "entities", {_id: _v3._id}, "edges", {});
+				results = await gdb.getInEV(dbname, "entities", {_id: _v3._id}, dbname, "edges", {});
 				assert(results.length==3); // itself, one edge, one vtx
 
 		    	await client.close();
@@ -92,7 +92,7 @@ describe('test a Graph in one DataBase', function(){
 			 let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
 			let gdb = new MG.Graph(client,{print_out:true});
 			gdb.begin_profiling("Main"); 
-				let results = await gdb.remove(dbname, "entities", {_id: _v1._id}, ["edges"]); 
+				let results = await gdb.remove(dbname, "entities", {_id: _v1._id}, [{db:dbname, table:"edges"}]); 
 		    	 
 		    	results = await gdb.get(dbname, "entities", {});
 				assert(results.length==2); // v2 and v3 remains. 
@@ -100,7 +100,7 @@ describe('test a Graph in one DataBase', function(){
 				results = await gdb.get(dbname, "edges",  {});
 				assert(results.length==0); // all edges are deleted 
 
-				results = await gdb.getInEV(dbname, "entities", {_id: _v2._id}, "edges", {});
+				results = await gdb.getInEV(dbname, "entities", {_id: _v2._id}, dbname, "edges", {});
 				assert(results.length==1); // only itself
 
 		    	await client.close();
