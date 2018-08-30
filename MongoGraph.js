@@ -149,20 +149,15 @@ MG.Graph = function(client, options){
      * @param {string} src_db_name - Mongo DB name of the source 
      * @param {string} src_collection_name - the name of collection for a given sources.
      * @param {Query} src_condition - a query of MongoDB find() command to defined a set of sources.
-     * @param {string} edge_db_name - Mongo DB name of the edge 
-     * @param {string} edge_col_name - the name of collection for the outgoing edges to the sources.
-     * @param {Query} edge_condition - a query of MongoDB find() command to defined the outgoing edges to the sources.
+     * @param {Array} arrayEdgeTables an array of db and table [{db:db_namde, table:edge_table_name, condition:query}] for getting edge conditions  
      * @return {Array} contating all destiations, incoming edges, and incoming sources.
     */
-	this.getOutEV = async function(src_db_name, src_collection_name, src_condition, edge_db_name, edge_col_name, edge_condition) {  
+	this.getOutEV = async function(src_db_name, src_collection_name, src_condition, arrayEdgeTables) {  
 		let resultArray=[]; // storage for finding.  
 		try {
 			this.begin_profiling("getOutEV"); 
 			let src_db = await this.client.db(src_db_name);
-			let src_collection = await src_db.collection(src_collection_name); //this.check_getCollection(db, src_collection_name, src_condition);  
-			let edge_db = await this.client.db(edge_db_name);
-			let edge_col = await edge_db.collection(edge_col_name); //this.check_getCollection(db, edge_col_name, edge_condition);   
-					
+			let src_collection = await src_db.collection(src_collection_name); //this.check_getCollection(db, src_collection_name, src_condition);   
 			
 			let IdSet = {}; // to make sure unique elements.        
 
@@ -172,32 +167,46 @@ MG.Graph = function(client, options){
 				if(!(src._id in IdSet)) { IdSet[src._id]=src;
 	            	resultArray.push(src); 
 				} 
-				//console.log("given vtx="+JSON.stringify(src)); 
-				let ext_edge_condition = JSON.parse(JSON.stringify(edge_condition)); // copy 
-				ext_edge_condition["_src._id"]=src._id; // add source condition 
-					
-				let Eitems = await edge_col.find(ext_edge_condition).toArray();
-				for(let jj=0; jj < Eitems.length; jj++) {
-					let edge = Eitems[jj]; 
-					if(edge._id && !(edge._id in IdSet)) { IdSet[edge._id]=edge;
-				        resultArray.push(edge); 
-					} 
-					//console.log("edge="+JSON.stringify(edge));
-					if( this.IsValidEdgeNode(edge._dst) )
+				if (!Array.isArray(arrayEdgeTables))
+					throw "arrayEdgeTables is not an Array !";
+
+				for(let ei=0; ei< arrayEdgeTables.length; ei++) {
+					let edgeconds = arrayEdgeTables[ei];
+					if(edgeconds && edgeconds.db && edgeconds.table)
 					{
-						let dst_db = await this.client.db(edge._dst.db);
-						let dst_col = await dst_db.collection(edge._dst.table); 
-						let DItems= await dst_col.find({_id:edge._dst._id}).toArray();				  
-						for(let kk=0; kk < DItems.length; kk++) {
-							let dst = DItems[kk]; 
-							if(!(dst._id in IdSet)) { IdSet[dst._id]=dst;
-				                resultArray.push(dst); 
-							}  
-						} // for each destination of an edge 
+						let edge_db = await this.client.db(edgeconds.db); 
+						let edge_col = await edge_db.collection(edgeconds.table); //this.check_getCollection(db, edge_col_name, edge_condition);  
+						edgeconds.condition = edgeconds.condition?edgeconds.condition:{};
+					 	let ext_edge_condition = JSON.parse(JSON.stringify(edgeconds.condition)); // copy 
+					 	ext_edge_condition["_src._id"]=src._id; // add source condition  
+						let Eitems = await edge_col.find(ext_edge_condition).toArray();
+						for(let jj=0; jj < Eitems.length; jj++) {
+							let edge = Eitems[jj]; 
+							if(edge._id && !(edge._id in IdSet)) { IdSet[edge._id]=edge;
+						        resultArray.push(edge); 
+							} 
+							//console.log("edge="+JSON.stringify(edge));
+							if( this.IsValidEdgeNode(edge._dst) )
+							{
+								let dst_db = await this.client.db(edge._dst.db);
+								let dst_col = await dst_db.collection(edge._dst.table); 
+								let DItems= await dst_col.find({_id:edge._dst._id}).toArray();				  
+								for(let kk=0; kk < DItems.length; kk++) {
+									let dst = DItems[kk]; 
+									if(!(dst._id in IdSet)) { IdSet[dst._id]=dst;
+						                resultArray.push(dst); 
+									}  
+								} // for each destination of an edge 
+							}
+							else 
+								throw "Invalid Destination Node:" + JSON.stgringify(edge._dst);
+						}// for each edge 
+					}// for each valid edge condition 
+					else {
+						throw  "Invalid edge condition: " + JSON.stgringify(edgeconds); 
 					}
-					else 
-						console.log("Invalid Destination Node:" + JSON.stgringify(edge._dst));
-				}// for each edge 
+				} // for each edge_condition 
+				//console.log("given vtx="+JSON.stringify(src));   
 			} // for each source 
 		}
 		catch(err){
@@ -214,19 +223,15 @@ MG.Graph = function(client, options){
      * @param {string} dst_db_name - Mongo DB name of the destination 
      * @param {string} dst_collection_name - the name of collection for a given targets.
      * @param {Query} dst_condition - a query of MongoDB find() command to defined a set of targets.
-     * @param {string} edge_db_name - Mongo DB name of the edge  
-     * @param {string} edge_col_name - the name of collection for the incoming edges to the targets.
-     * @param {Query} edge_condition - a query of MongoDB find() command to defined the incoming edges to the targets. 
+     * @param {Array} arrayEdgeTables an array of db and table [{db:db_namde, table:edge_table_name, condition:query}] for getting edge conditions  
      * @return {Array} contating all destiations, incoming edges, and incoming sources. 
     */
-	this.getInEV = async function(dst_db_name, dst_collection_name, dst_condition, edge_db_name, edge_col_name, edge_condition) { 
+	this.getInEV = async function(dst_db_name, dst_collection_name, dst_condition, arrayEdgeTables ) { 
 		let resultArray=[]; // storage for finding. 
 		try {
 			this.begin_profiling("getInEV"); 
 			let dst_db = await this.client.db(dst_db_name);
-			let dst_collection = await dst_db.collection(dst_collection_name); // this.check_getCollection(db, dst_collection_name, dst_condition); 
-			let edge_db = await this.client.db(edge_db_name); 
-			let edge_col = await edge_db.collection(edge_col_name); //this.check_getCollection(db, edge_col_name, edge_condition);  
+			let dst_collection = await dst_db.collection(dst_collection_name); // this.check_getCollection(db, dst_collection_name, dst_condition);  
 			
 			let IdSet = {}; // to make sure unique elements.     
 			let Ditems = await dst_collection.find(dst_condition).toArray(); 
@@ -235,33 +240,48 @@ MG.Graph = function(client, options){
 				if(!(dst._id in IdSet)) {  IdSet[dst._id]=dst;
 	                resultArray.push(dst); // add each destination
 				}
-				//console.log("given vtx="+JSON.stringify(dst)); 
-				let ext_edge_condition = JSON.parse(JSON.stringify(edge_condition)); // copy 
-				ext_edge_condition["_dst._id"]=dst._id; // add destination condition 
-					
-				let Eitems = await edge_col.find(ext_edge_condition).toArray();
-				for(let jj=0; jj < Eitems.length; jj++) {
-					let edge = Eitems[jj];
-					if(edge._id && !(edge._id in IdSet)) { IdSet[edge._id]=edge;
-						resultArray.push(edge); // add each incoming edge 
-					} 
-					//console.log("edge="+JSON.stringify(edge));
-					if( this.IsValidEdgeNode(edge._src) )
+				if (!Array.isArray(arrayEdgeTables))
+					throw "arrayEdgeTables is not an Array !";
+
+				for(let ei=0; ei< arrayEdgeTables.length; ei++) {
+					let edgeconds = arrayEdgeTables[ei];
+					if(edgeconds && edgeconds.db && edgeconds.table)
 					{
-						let src_db = await this.client.db(edge._src.db);
-						let src_col = await src_db.collection(edge._src.table); 
-						let Sitems= await src_col.find({_id:edge._src._id}).toArray(); 
-						    
-						for(let kk=0; kk < Sitems.length; kk++) {
-							let src = Sitems[kk];
-							if(!(src._id in IdSet)){ IdSet[src._id]=src;
-								resultArray.push(src);// add each source of an edge 
+						let edge_db = await this.client.db(edgeconds.db); 
+						let edge_col = await edge_db.collection(edgeconds.table); //this.check_getCollection(db, edge_col_name, edge_condition);  
+						edgeconds.condition = edgeconds.condition?edgeconds.condition:{};
+					 	let ext_edge_condition = JSON.parse(JSON.stringify(edgeconds.condition)); // copy 
+						ext_edge_condition["_dst._id"]=dst._id; // add destination condition 
+						let Eitems = await edge_col.find(ext_edge_condition).toArray();
+						for(let jj=0; jj < Eitems.length; jj++) {
+							let edge = Eitems[jj];
+							if(edge._id && !(edge._id in IdSet)) { IdSet[edge._id]=edge;
+								resultArray.push(edge); // add each incoming edge 
 							} 
-						}  // for source 
+							//console.log("edge="+JSON.stringify(edge));
+							if( this.IsValidEdgeNode(edge._src) )
+							{
+								let src_db = await this.client.db(edge._src.db);
+								let src_col = await src_db.collection(edge._src.table); 
+								let Sitems= await src_col.find({_id:edge._src._id}).toArray(); 
+								    
+								for(let kk=0; kk < Sitems.length; kk++) {
+									let src = Sitems[kk];
+									if(!(src._id in IdSet)){ IdSet[src._id]=src;
+										resultArray.push(src);// add each source of an edge 
+									} 
+								}  // for source 
+							}
+							else {
+								throw  "Invalid Source Node:" + JSON.stgringify(edge._src); 
+							}
+						} // for each incoming edge 
+					} // for each valid edge condition 
+					else {
+						throw  "Invalid edge condition: " + JSON.stgringify(edgeconds); 
 					}
-					else
-						console.log("Invalid Source Node:" + JSON.stgringify(edge._src)); 
-				} // for each incoming edge 
+				} // for each edge_condition 
+				//console.log("given vtx="+JSON.stringify(dst));   
 			}// for each destination  
 		}
 		catch(err){
@@ -278,7 +298,7 @@ MG.Graph = function(client, options){
      * @param {string} db_name - Mongo DB name
      * @param {string} collection_name - the name of collection for a given sources.
      * @param {Query} condition - a query of MongoDB find() command to defined a set of sources.
-     * @param {[Object]} edges - an array of db and table [{db:db_namde, table:edge_table_name}] for removing edges. 
+     * @param {[Object]} arrayEdgeTables - an array of db and table [{db:db_namde, table:edge_table_name}] for removing edges. 
      *
     */
 	this.remove = async function(db_name, collection_name, condition, arrayEdgeTables) {   

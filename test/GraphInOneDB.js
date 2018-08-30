@@ -67,16 +67,16 @@ describe('test a Graph in one DataBase', function(){
 			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
 			let gdb = new MG.Graph(client,{print_out:true});
 			gdb.begin_profiling("Main"); 
-				let results = await gdb.getOutEV(dbname, "entities", {_id: _v1._id}, dbname, "edges", {});
+				let results = await gdb.getOutEV(dbname, "entities", {_id: _v1._id}, [{db:dbname, table:"edges", condition:{}}]);
 				assert(results.length==5); // itself, two edges, two out vtxs
 		    	 
-		    	results = await gdb.getInEV(dbname, "entities", {_id: _v1._id}, dbname, "edges", {});
+		    	results = await gdb.getInEV(dbname, "entities", {_id: _v1._id}, [{db:dbname, table:"edges", condition:{}}]);
 				assert(results.length==1); // only itself
 
-				results = await gdb.getInEV(dbname, "entities", {_id: _v2._id}, dbname, "edges", {});
+				results = await gdb.getInEV(dbname, "entities", {_id: _v2._id}, [{db:dbname, table:"edges", condition:{}}]);
 				assert(results.length==3); // itself, one edge, one vtx
 
-				results = await gdb.getInEV(dbname, "entities", {_id: _v3._id}, dbname, "edges", {});
+				results = await gdb.getInEV(dbname, "entities", {_id: _v3._id}, [{db:dbname, table:"edges", condition:{}}]);
 				assert(results.length==3); // itself, one edge, one vtx
 
 		    	await client.close();
@@ -89,7 +89,7 @@ describe('test a Graph in one DataBase', function(){
 	});
     it('Test remove function', async() => { 
 		try{
-			 let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
+			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
 			let gdb = new MG.Graph(client,{print_out:true});
 			gdb.begin_profiling("Main"); 
 				let results = await gdb.remove(dbname, "entities", {_id: _v1._id}, [{db:dbname, table:"edges"}]); 
@@ -100,7 +100,7 @@ describe('test a Graph in one DataBase', function(){
 				results = await gdb.get(dbname, "edges",  {});
 				assert(results.length==0); // all edges are deleted 
 
-				results = await gdb.getInEV(dbname, "entities", {_id: _v2._id}, dbname, "edges", {});
+				results = await gdb.getInEV(dbname, "entities", {_id: _v2._id}, [{db:dbname, table:"edges", condition:{}}]);
 				assert(results.length==1); // only itself
 
 		    	await client.close();
