@@ -156,46 +156,32 @@ MG.Graph = function(client, options){
 		let resultArray=[]; // storage for finding.  
 		try {
 			this.begin_profiling("getOutEV"); 
-			let src_db = await this.client.db(src_db_name);
-			let src_collection = await src_db.collection(src_collection_name); //this.check_getCollection(db, src_collection_name, src_condition);   
-			
-			let IdSet = {}; // to make sure unique elements.        
+			let IdSet = {};  
+			let Sitems = await this.get(src_db_name, src_collection_name, src_condition);  
 
-			let Sitems = await src_collection.find(src_condition).toArray(); 
 			for(let ii=0; ii<Sitems.length; ii++) {
 				let src = Sitems[ii];
-				if(!(src._id in IdSet)) { IdSet[src._id]=src;
-	            	resultArray.push(src); 
-				} 
+				if(!(src._id in IdSet)) { IdSet[src._id]=src; resultArray.push(src);  } 
 				if (!Array.isArray(arrayEdgeTables))
 					throw "arrayEdgeTables is not an Array !";
 
 				for(let ei=0; ei< arrayEdgeTables.length; ei++) {
 					let edgeconds = arrayEdgeTables[ei];
 					if(edgeconds && edgeconds.db && edgeconds.table)
-					{
-						let edge_db = await this.client.db(edgeconds.db); 
-						let edge_col = await edge_db.collection(edgeconds.table); //this.check_getCollection(db, edge_col_name, edge_condition);  
-						edgeconds.condition = edgeconds.condition?edgeconds.condition:{};
-					 	let ext_edge_condition = JSON.parse(JSON.stringify(edgeconds.condition)); // copy 
-					 	ext_edge_condition["_src._id"]=src._id; // add source condition  
-						let Eitems = await edge_col.find(ext_edge_condition).toArray();
+					{   
+						let edge_condition = edgeconds.condition?edgeconds.condition:{}; // make 
+					 	let ext_edge_condition = JSON.parse(JSON.stringify(edge_condition)) || {"_src._id": src._id} ; //   add source condition   
+						let Eitems = await this.get(edgeconds.db, edgeconds.table, ext_edge_condition); //edge_col.find(ext_edge_condition).toArray(); //
 						for(let jj=0; jj < Eitems.length; jj++) {
 							let edge = Eitems[jj]; 
-							if(edge._id && !(edge._id in IdSet)) { IdSet[edge._id]=edge;
-						        resultArray.push(edge); 
-							} 
+							if(edge._id && !(edge._id in IdSet)) { IdSet[edge._id]=edge; resultArray.push(edge); } 
 							//console.log("edge="+JSON.stringify(edge));
 							if( this.IsValidEdgeNode(edge._dst) )
-							{
-								let dst_db = await this.client.db(edge._dst.db);
-								let dst_col = await dst_db.collection(edge._dst.table); 
-								let DItems= await dst_col.find({_id:edge._dst._id}).toArray();				  
+							{ 
+								let DItems= await this.get(edge._dst.db, edge._dst.table, {_id:edge._dst._id}); // dst_col.find({_id:edge._dst._id}).toArray(); //		  
 								for(let kk=0; kk < DItems.length; kk++) {
 									let dst = DItems[kk]; 
-									if(!(dst._id in IdSet)) { IdSet[dst._id]=dst;
-						                resultArray.push(dst); 
-									}  
+									if(!(dst._id in IdSet)) { IdSet[dst._id]=dst; resultArray.push(dst); }  
 								} // for each destination of an edge 
 							}
 							else 
@@ -230,46 +216,33 @@ MG.Graph = function(client, options){
 		let resultArray=[]; // storage for finding. 
 		try {
 			this.begin_profiling("getInEV"); 
-			let dst_db = await this.client.db(dst_db_name);
-			let dst_collection = await dst_db.collection(dst_collection_name); // this.check_getCollection(db, dst_collection_name, dst_condition);  
-			
-			let IdSet = {}; // to make sure unique elements.     
-			let Ditems = await dst_collection.find(dst_condition).toArray(); 
+			let IdSet = {}; // to make sure unique elements.      
+			let Ditems = await this.get(dst_db_name, dst_collection_name, dst_condition); // dst_collection.find(dst_condition).toArray(); 
 			for(let ii=0; ii<Ditems.length; ii++) {
 				let dst = Ditems[ii];  
-				if(!(dst._id in IdSet)) {  IdSet[dst._id]=dst;
-	                resultArray.push(dst); // add each destination
-				}
+				if(!(dst._id in IdSet)) {  IdSet[dst._id]=dst; resultArray.push(dst); } // add each destination
+				
 				if (!Array.isArray(arrayEdgeTables))
 					throw "arrayEdgeTables is not an Array !";
 
 				for(let ei=0; ei< arrayEdgeTables.length; ei++) {
 					let edgeconds = arrayEdgeTables[ei];
 					if(edgeconds && edgeconds.db && edgeconds.table)
-					{
-						let edge_db = await this.client.db(edgeconds.db); 
-						let edge_col = await edge_db.collection(edgeconds.table); //this.check_getCollection(db, edge_col_name, edge_condition);  
-						edgeconds.condition = edgeconds.condition?edgeconds.condition:{};
-					 	let ext_edge_condition = JSON.parse(JSON.stringify(edgeconds.condition)); // copy 
+					{ 
+						let edge_condition = edgeconds.condition?edgeconds.condition:{}; // make 
+					 	let ext_edge_condition = JSON.parse(JSON.stringify(edge_condition)) ; 
 						ext_edge_condition["_dst._id"]=dst._id; // add destination condition 
-						let Eitems = await edge_col.find(ext_edge_condition).toArray();
+						let Eitems = await this.get(edgeconds.db, edgeconds.table, ext_edge_condition); // edge_col.find(ext_edge_condition).toArray();
 						for(let jj=0; jj < Eitems.length; jj++) {
 							let edge = Eitems[jj];
-							if(edge._id && !(edge._id in IdSet)) { IdSet[edge._id]=edge;
-								resultArray.push(edge); // add each incoming edge 
-							} 
+							if(edge._id && !(edge._id in IdSet)) { IdSet[edge._id]=edge; resultArray.push(edge); }// add each incoming edge  
 							//console.log("edge="+JSON.stringify(edge));
 							if( this.IsValidEdgeNode(edge._src) )
-							{
-								let src_db = await this.client.db(edge._src.db);
-								let src_col = await src_db.collection(edge._src.table); 
-								let Sitems= await src_col.find({_id:edge._src._id}).toArray(); 
-								    
+							{ 
+								let Sitems= await this.get(edge._src.db, edge._src.table, {_id:edge._src._id}); // src_col.find({_id:edge._src._id}).toArray();  
 								for(let kk=0; kk < Sitems.length; kk++) {
 									let src = Sitems[kk];
-									if(!(src._id in IdSet)){ IdSet[src._id]=src;
-										resultArray.push(src);// add each source of an edge 
-									} 
+									if(!(src._id in IdSet)){ IdSet[src._id]=src; resultArray.push(src); }// add each source of an edge  
 								}  // for source 
 							}
 							else {
