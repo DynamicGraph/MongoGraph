@@ -170,7 +170,8 @@ MG.Graph = function(client, options){
 					if(edgeconds && edgeconds.db && edgeconds.table)
 					{   
 						let edge_condition = edgeconds.condition?edgeconds.condition:{}; // make 
-					 	let ext_edge_condition = JSON.parse(JSON.stringify(edge_condition)) || {"_src._id": src._id} ; //   add source condition   
+					 	let ext_edge_condition = JSON.parse(JSON.stringify(edge_condition));
+					 	ext_edge_condition["_src._id"]=src._id; //   add source condition   
 						let Eitems = await this.get(edgeconds.db, edgeconds.table, ext_edge_condition); //edge_col.find(ext_edge_condition).toArray(); //
 						for(let jj=0; jj < Eitems.length; jj++) {
 							let edge = Eitems[jj]; 
