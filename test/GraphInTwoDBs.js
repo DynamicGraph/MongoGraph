@@ -70,9 +70,9 @@ describe('test a Graph in TWO DataBases', function(){
 			gdb.begin_profiling("Main"); 
 				let results = await gdb.getOutEV(db_members, "members", {_id: _member._id}, [{db:db_members, table:"members2books"}]);
 				assert(results.length==3); // itself, one edge, one book
-		    	debugger; // 
+		    	//debugger; // 
 		    	results = await gdb.getInEV(db_books, "books", {_id: _book._id}, 
-		    		[{db: db_members, table:"members2books", condition:{}}, {db: db_books, table:"publishers2books"}]);
+		    							[{db: db_members, table:"members2books", condition:{}}, {db: db_books, table:"publishers2books"}]);
 				assert(results.length==5); // itself, one edge, one member
 		    	await client.close();
 			gdb.end_profiling(); 
