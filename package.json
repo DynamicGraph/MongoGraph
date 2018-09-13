@@ -1,5 +1,5 @@
 {
-  "name": "mongograph",
+  "name": "@dynamicgraph/mongograph",
   "version": "1.0.0",
   "description": "Graph-based MongoDB",
   "main": "MongoGraph.js",
@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "MongoGraph"
+    "url": "git+https://github.com/dynamicgraph/MongoGraph.git"
   },
   "author": "Moon Ho Hwang",
   "license": "MIT",
@@ -19,5 +19,12 @@
   "devDependencies": {
     "chai": "^4.1.2",
     "mocha": "^5.2.0"
-  } 
+  },
+  "directories": {
+    "test": "test"
+  },
+  "bugs": {
+    "url": "https://github.com/dynamicgraph/MongoGraph/issues"
+  },
+  "homepage": "https://github.com/dynamicgraph/MongoGraph#readme"
 }
