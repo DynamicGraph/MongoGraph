@@ -1,5 +1,5 @@
 {
-  "name": "@dynamicgraph/mongograph",
+  "name": "@mhhwang2002/mongograph",
   "version": "1.0.0",
   "description": "Graph-based MongoDB",
   "main": "MongoGraph.js",
