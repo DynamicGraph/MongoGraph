@@ -12,7 +12,7 @@
     "url": "git+https://github.com/dynamicgraph/MongoGraph.git"
   },
   "author": "Moon Ho Hwang",
-  "license": "MIT",
+  "license": "GNU LGPL",
   "dependencies": {
     "mongodb": "^3.1.3"
   },

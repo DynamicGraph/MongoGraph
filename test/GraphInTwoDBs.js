@@ -11,15 +11,28 @@ describe('test a Graph in TWO DataBases', function(){
 	let db_members="Test_members"
 	let db_books = "Test_books";
 	var _member=null, _book=null, _publisher=null;
-	
+	it('Test delete  a member and a book in two DBs  ', async() => { 
+		try{
+			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
+			let gdb = new MG.Graph(client, {print_out:true});
+			gdb.begin_profiling("Main"); 
+			    await gdb.clearDB(db_books); // clear all test DB 
+			    await gdb.clearDB(db_members); // clear all test DB   
+		    	await client.close();  
+		    	//assert(0);
+			gdb.end_profiling();   
+		}
+		catch(err){
+			console.log(err);
+			assert(0); 
+		} 
+	});
+
 	it('Test create a member and a book in two DBs  ', async() => { 
 		try{
 			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
-			let gdb = new MG.Graph(client,{print_out:true});
-			gdb.begin_profiling("Main"); 
-			    await gdb.clearDB(db_books); // clear all test DB 
-			    await gdb.clearDB(db_members); // clear all test DB 
-
+			let gdb = new MG.Graph(client, {print_out:true});
+			gdb.begin_profiling("Main");   
 			    let results = await gdb.insert(db_members, "members", {name:"Moon"});
 			    results = await gdb.get(db_members, "members", {});
 				_member = results[0];
@@ -82,50 +95,4 @@ describe('test a Graph in TWO DataBases', function(){
 			assert(0);
 		}  
 	});
-	
-	/*
-    it('Test remove function', async() => { 
-		try{
-			 let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
-			let gdb = new MG.Graph(client,{print_out:true});
-			gdb.begin_profiling("Main"); 
-				let results = await gdb.remove(db_books, "entities", {_id: _v1._id}, ["edges"]); 
-		    	 
-		    	results = await gdb.get(db_books, "entities", {});
-				assert(results.length==2); // v2 and v3 remains. 
-
-				results = await gdb.get(db_books, "edges",  {});
-				assert(results.length==0); // all edges are deleted 
-
-				results = await gdb.getInEV(db_books, "entities", {_id: _v2._id}, "edges", {});
-				assert(results.length==1); // only itself
-
-		    	await client.close();
-			gdb.end_profiling(); 
-			//assert(0); // intentional fail for checking hanging. 
-		}
-		catch(err){
-			console.log(err);
-			assert(0);
-		}  
-	}); 
-	it('Test update function', async() => { 
-		try{
-			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
-			let gdb = new MG.Graph(client,{print_out:true});
-			gdb.begin_profiling("Main"); 
-				let result = await gdb.update(db_books, "entities", {_id: _v2._id}, {id:22} ); 
-				assert(result.modifiedCount==1); //   
-				let results = await gdb.get(db_books, "entities", {_id: _v2._id}); 
-				assert(results[0].id == 22);
-		    	await client.close();
-			gdb.end_profiling(); 
-			//assert(0); // intentional fail for checking hanging. 
-		}
-		catch(err){
-			console.log(err);
-			assert(0);
-		}  
-	}); 
-	*/
 });

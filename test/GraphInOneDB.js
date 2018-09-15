@@ -11,12 +11,25 @@ describe('test a Graph in one DataBase', function(){
     console.log(" +--->3");
 	let dbname = "MoonHo";
 	var _v1=null, _v2=null, _v3=null
-	it('Test create three vertices: "1", "2", "3" ', async() => { 
+	it('Test detele test DB', async() => { 
 		try{
 			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
 			let gdb = new MG.Graph(client,{print_out:true});
 			gdb.begin_profiling("Main"); 
-			    await gdb.clearDB(dbname); // clear all test DB 
+			    await gdb.clearDB(dbname); // 
+		    	await client.close();
+			gdb.end_profiling();   
+		}
+		catch(err){
+			console.log(err);
+			assert(0); 
+		} 
+	});
+	it('Test create three vertices: "1", "2", "3" ', async() => { 
+		try{
+			let client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true});
+			let gdb = new MG.Graph(client,{print_out:true});
+			gdb.begin_profiling("Main");
 				let results = await gdb.insert(dbname, "entities", [{id:1}, {id:2}, {id:3}])  
 				let things = await gdb.get(dbname, "entities", {});   
 				assert(things.length == 3);
