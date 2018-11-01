@@ -5,8 +5,8 @@
   Modification History 
      Jan/25/2017: create
 */
-var MongoClient = require('mongodb').MongoClient
-  , assert = require('assert');
+//var MongoClient = require('mongodb').MongoClient
+//  , assert = require('assert');
  
 var MG = MG || {version:"1.0.0", ky_db:"_db", ky_id:"_id", ky_cl:"_collection", ky_src:"_src", ky_dst:"_dst"} 
 
